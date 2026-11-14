@@ -1,0 +1,8 @@
+local tmp cwd result
+tmp="$(mktemp -t yazi-cwd.XXXXXX)" || return
+command yazi "$@" --cwd-file="$tmp"
+result=$?
+IFS= read -r -d '' cwd < "$tmp"
+[[ -n "$cwd" && "$cwd" != "$PWD" && -d "$cwd" ]] && builtin cd -- "$cwd"
+command rm -f -- "$tmp"
+return "$result"
