@@ -143,8 +143,12 @@ def install_lazygit(work: Path, arch: str) -> None:
         "https://api.github.com/repos/jesseduffield/lazygit/releases/latest"
     )
     version = release["tag_name"].removeprefix("v")
-    name = f"lazygit_{version}_Linux_{arch}.tar.gz"
-    matches = [asset for asset in release["assets"] if asset["name"] == name]
+    name = f"lazygit_{version}_linux_{arch}.tar.gz"
+    matches = [
+        asset
+        for asset in release["assets"]
+        if asset["name"].casefold() == name.casefold()
+    ]
     if len(matches) != 1:
         raise ValueError(f"Expected one release asset: {name}")
     archive = work / "lazygit.tar.gz"

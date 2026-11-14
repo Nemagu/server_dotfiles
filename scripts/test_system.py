@@ -65,6 +65,51 @@ class SystemTests(TestCase):
         ):
             system.release_asset("owner/repo", "file.zip")
 
+    def test_lazygit_accepts_current_and_legacy_os_case_for_each_architecture(self):
+        for arch in ("x86_64", "arm64"):
+            for os_name in ("linux", "Linux"):
+                with (
+                    self.subTest(arch=arch, os_name=os_name),
+                    TemporaryDirectory() as temporary,
+                ):
+                    work = Path(temporary)
+                    binary_dir = work / "bin"
+                    binary_dir.mkdir()
+                    with open_tar(work / "lazygit.tar.gz", "w:gz") as output:
+                        member = TarInfo("lazygit")
+                        member.size = 4
+                        output.addfile(member, BytesIO(b"test"))
+                    url = "https://example.test/correct-archive"
+                    assets = [
+                        {
+                            "name": f"lazygit_0.66.3_{os_name}_{arch}.tar.gz",
+                            "browser_download_url": url,
+                        },
+                        {
+                            "name": f"lazygit_0.66.3_darwin_{arch}.tar.gz",
+                            "browser_download_url": "wrong-os",
+                        },
+                        {
+                            "name": "lazygit_0.66.3_linux_32-bit.tar.gz",
+                            "browser_download_url": "wrong-arch",
+                        },
+                    ]
+                    with (
+                        patch.object(
+                            system,
+                            "read_json",
+                            return_value={"tag_name": "v0.66.3", "assets": assets},
+                        ),
+                        patch.object(system, "download") as download,
+                        patch.object(system, "BIN", binary_dir),
+                    ):
+                        system.install_lazygit(work, arch)
+                        download.assert_called_once_with(url, work / "lazygit.tar.gz")
+                    self.assertEqual((binary_dir / "lazygit").read_bytes(), b"test")
+                    self.assertEqual(
+                        (binary_dir / "lazygit").stat().st_mode & 0o777, 0o755
+                    )
+
     def test_tar_rejects_parent_traversal(self):
         with TemporaryDirectory() as temporary:
             root = Path(temporary)
