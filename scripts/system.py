@@ -205,7 +205,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         arch = validate_host()
         command("apt-get", "update")
-        command("apt-get", "install", "-y", *PACKAGES)
+        command("apt-get", "-o", "DPkg::Lock::Timeout=600", "install", "-y", *PACKAGES)
         BIN.mkdir(parents=True, exist_ok=True)
         OPT.mkdir(parents=True, exist_ok=True)
         link_binary(Path("/usr/bin/batcat"), "bat")

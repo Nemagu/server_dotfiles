@@ -2,6 +2,7 @@
 
 from io import BytesIO
 from pathlib import Path
+from subprocess import CalledProcessError
 from tarfile import FilterError, TarInfo
 from tarfile import open as open_tar
 from tempfile import TemporaryDirectory
@@ -29,6 +30,34 @@ class SystemTests(TestCase):
         ):
             self.assertEqual(system.main([]), 1)
             command.assert_not_called()
+
+    def test_apt_waits_for_dpkg_lock_and_stops_if_timeout_expires(self):
+        with (
+            patch.object(system, "validate_host", return_value="x86_64"),
+            patch.object(
+                system,
+                "command",
+                side_effect=[None, CalledProcessError(100, "apt-get")],
+            ) as command,
+            patch.object(system, "install_neovim") as install_neovim,
+            patch.object(system, "link_binary") as link_binary,
+            patch("builtins.print"),
+        ):
+            self.assertEqual(system.main([]), 1)
+            self.assertEqual(command.call_args_list[0].args, ("apt-get", "update"))
+            self.assertEqual(
+                command.call_args_list[1].args,
+                (
+                    "apt-get",
+                    "-o",
+                    "DPkg::Lock::Timeout=600",
+                    "install",
+                    "-y",
+                    *system.PACKAGES,
+                ),
+            )
+            install_neovim.assert_not_called()
+            link_binary.assert_not_called()
 
     def test_supported_architectures_and_rejection(self):
         with (

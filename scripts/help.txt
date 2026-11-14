@@ -8,6 +8,7 @@ make system                     [root, Ubuntu x86_64/arm64]
   Устанавливает apt-зависимости, Stow, Zsh, tmux, bat, btop и средства поиска.
   Скачивает актуальные Neovim, Yazi/ya, lazygit, fzf и Node.js LTS.
   Бинарники: /usr/local/bin; runtime Neovim/Node.js: /opt. Нужен python3.
+  При блокировке dpkg ждёт до 10 минут, не прерывая чужие обновления.
 
 make system-update              [root]
   Повторяет make system, обновляя перечисленные пакеты и бинарники.
