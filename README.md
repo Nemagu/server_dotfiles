@@ -25,7 +25,7 @@ cd "$HOME/.dotfiles"
 
 ```sh
 sudo make system
-make install
+make install  # Включает применение конфигов через Stow
 make shell
 ```
 

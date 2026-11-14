@@ -1,9 +1,10 @@
 """Проверки пользовательских операций без установки и изменения оболочки."""
 
 from pathlib import Path
-from subprocess import CalledProcessError
+from shutil import which
+from subprocess import CalledProcessError, run
 from tempfile import TemporaryDirectory
-from unittest import TestCase, main
+from unittest import TestCase, main, skipUnless
 from unittest.mock import patch
 
 import setup
@@ -31,6 +32,45 @@ class SetupTests(TestCase):
                 setup.link_configs()
             self.assertEqual(command.call_count, 1)
             self.assertIn("--simulate", command.call_args.args)
+
+    @skipUnless(which("stow"), "GNU Stow is required for the integration test")
+    def test_stow_links_repo_inside_home_and_can_reapply_manual_links(self):
+        for existing_links in (False, True):
+            with (
+                self.subTest(existing_links=existing_links),
+                TemporaryDirectory() as temporary,
+            ):
+                home = Path(temporary) / "home"
+                repository = home / ".dotfiles"
+                config = repository / ".config/zsh"
+                config.mkdir(parents=True)
+                (repository / ".zshenv").write_text(
+                    'export ZDOTDIR="$HOME/.config/zsh"\n'
+                )
+                (config / ".zshrc").write_text('ZSH_THEME="edvardm"\n')
+                (repository / "scripts").mkdir()
+                (repository / "scripts/setup.py").write_text("# installer\n")
+                (repository / "Makefile").write_text("# makefile\n")
+                (repository / ".stow-local-ignore").write_text(
+                    "^/scripts\n^/Makefile$\n"
+                )
+                if existing_links:
+                    run(
+                        ["stow", f"--dir={repository}", f"--target={home}", "."],
+                        check=True,
+                        capture_output=True,
+                    )
+                with (
+                    patch.object(setup, "ROOT", repository),
+                    patch.object(setup, "HOME", home),
+                ):
+                    setup.link_configs()
+                    setup.link_configs()
+                for name in (".zshenv", ".config/zsh/.zshrc"):
+                    self.assertTrue((home / name).is_symlink())
+                    self.assertEqual((home / name).resolve(), repository / name)
+                self.assertFalse((home / "scripts").exists())
+                self.assertFalse((home / "Makefile").exists())
 
     def test_checkout_refuses_non_repository_directory(self):
         with (

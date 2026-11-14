@@ -160,11 +160,11 @@ def link_configs() -> None:
     args = (
         "stow",
         "--no-folding",
-        f"--dir={ROOT.parent}",
+        f"--dir={ROOT}",
         f"--target={HOME}",
     )
-    command(*args, "--simulate", "--verbose", ROOT.name)
-    command(*args, "--restow", "--verbose", ROOT.name)
+    command(*args, "--simulate", "--verbose", ".")
+    command(*args, "--restow", "--verbose", ".")
 
 
 def change_shell() -> None:
